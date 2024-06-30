@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import os
 import redis
 import sys
+import json
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -57,6 +58,33 @@ def authenticate():
             return jsonify({'error': 'Invalid username or password'}), 401
     except redis.RedisError as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/register', methods=['POST'])
+def register():
+    data = request.get_json()
+    if not data or 'email' not in data:
+        return jsonify({'error': 'Email is missing'}), 400
+
+    email = data['email']
+    waitlist_file = 'waitlist.json'
+
+    if os.path.exists(waitlist_file):
+        with open(waitlist_file, 'r+') as file:
+            try:
+                waitlist = json.load(file)
+            except json.JSONDecodeError:
+                waitlist = []
+    else:
+        waitlist = []
+
+    # Append the new email to the waitlist
+    waitlist.append(email)
+
+    # Write the updated waitlist back to the file
+    with open(waitlist_file, 'w') as file:
+        json.dump(waitlist, file, indent=4)
+
+    return jsonify({'message': 'Email registered successfully'})
 
 # Main driver function
 if __name__ == '__main__':
